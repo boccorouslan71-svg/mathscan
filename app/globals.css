@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  @apply antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  @apply bg-white text-ink-900 dark:bg-ink-900 dark:text-white;
+}
+
+/* Bouton tactile principal — gros, atteignable au pouce */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl2 px-5 py-4 text-base font-semibold transition active:scale-[0.98] disabled:opacity-50;
+}
+.btn-primary {
+  @apply btn bg-brand-500 text-white shadow-glow hover:bg-brand-600;
+}
+.btn-ghost {
+  @apply btn border border-black/10 bg-black/[0.03] text-ink-900 dark:border-white/10 dark:bg-white/5 dark:text-white;
+}
+.card {
+  @apply rounded-xl2 border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/10 dark:bg-ink-800;
+}
+.chip {
+  @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium;
+}
+/* Zone de sécurité iOS (encoche + barre home) en mode standalone */
+.safe {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}

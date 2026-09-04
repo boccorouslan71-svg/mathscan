@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+.env*.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# Service Worker généré par next-pwa (recréé à chaque build)
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/fallback-*.js
+
+# Assets OCR téléchargés au build (~25 Mo) — voir scripts/telecharge-assets.mjs
+public/tesseract/worker.min.js
+public/tesseract/tesseract-core*.js
+public/tesseract/lang/
+
+# Modèle Needle 2 optionnel, s'il est ajouté un jour
+public/needle/
