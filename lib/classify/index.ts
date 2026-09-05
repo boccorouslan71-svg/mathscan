@@ -48,6 +48,15 @@ export function normaliseOCR(brut: string): string {
     .replace(/([0-9])[lI](?=[^a-zA-Z]|$)/g, "$11")
     .replace(/\bx\s*2\b/g, "x^2")
     .replace(/[ \t]{2,}/g, " ");
+  // Étiquette d'item en début de ligne : « a) », « b) », « bh) » (l'OCR double parfois
+  // la lettre). Sans ce nettoyage, la parenthèse entrait dans le calcul et le solveur
+  // s'arrêtait sur « Unexpected operator ) » — constaté en production sur une photo réelle.
+  s = s.replace(/^\s*[A-Za-z]{1,2}\s*\)\s*/gm, "");
+  // Pointillés de réponse à remplir : « = ....... », « = .eeeeee », « = … ».
+  // L'OCR lit ces pointillés comme des lettres ; on coupe tout ce qui suit le « = » final
+  // quand il ne reste qu'un amas de points ou de lettres répétées.
+  s = s.replace(/=\s*[.·•…\s]*[eE]{2,}[.·•…\s]*$/gm, "=");
+  s = s.replace(/=\s*[.·•…]{2,}\s*$/gm, "=");
   // « x = ? » et parasites de fin
   s = s.replace(/[.·•]+\s*$/gm, "").trim();
   return s;
