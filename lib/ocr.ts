@@ -17,28 +17,40 @@ const CHEMINS = {
   langPath: "/tesseract/lang",
 };
 
-/** Caractères attendus : chiffres, opérateurs et lettres usuelles d'énoncés. */
-const LISTE_BLANCHE =
-  "0123456789+-*/=<>()[]{}.,;:%^√πxyzabcnhrltLSPVAE°²³ ابcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZàâçéèêëîïôùûü'’";
-
+/**
+ * PAS de tessedit_char_whitelist ici, volontairement.
+ * Le moteur LSTM de Tesseract 4/5 reconnaît le texte par ligne entière, pas
+ * caractère par caractère : une liste blanche le contraint mal et dégrade la
+ * lecture. Surtout, toute liste écrite à la main finit par oublier un symbole —
+ * « × » et « ÷ » manquaient, donc les multiplications et divisions des énoncés
+ * étaient effacées avant même d'être interprétées. La normalisation des symboles
+ * se fait après coup dans lib/classify (normaliseOCR), où elle est testable.
+ */
 async function démarre(onAvancement?: Avancement): Promise<Worker> {
   if (worker) return worker;
   if (!init)
     init = (async () => {
-      const w = await createWorker(["fra", "eng"], 1, {
-        ...CHEMINS,
-        logger: (m) => {
-          if (onAvancement && m.status)
-            onAvancement(traduitStatut(m.status), typeof m.progress === "number" ? m.progress : 0);
-        },
-        // cacheMethod par défaut = IndexedDB : le modèle n'est téléchargé qu'une fois
-      });
-      await w.setParameters({
-        tessedit_char_whitelist: LISTE_BLANCHE.replace(/اب/g, ""),
-        preserve_interword_spaces: "1",
-      });
-      worker = w;
-      return w;
+      try {
+        const w = await createWorker(["fra", "eng"], 1, {
+          ...CHEMINS,
+          logger: (m) => {
+            if (onAvancement && m.status)
+              onAvancement(traduitStatut(m.status), typeof m.progress === "number" ? m.progress : 0);
+          },
+          // cacheMethod par défaut = IndexedDB : le modèle n'est téléchargé qu'une fois
+        });
+        await w.setParameters({ preserve_interword_spaces: "1" });
+        worker = w;
+        return w;
+      } catch (e) {
+        // Un échec ici = moteur ou modèle inaccessible. On le dit clairement :
+        // le message remonte tel quel à l'écran de traitement.
+        init = null;
+        throw new Error(
+          "Le moteur de lecture n'a pas pu démarrer. Vérifie ta connexion pour le premier scan, puis réessaie.",
+          { cause: e },
+        );
+      }
     })();
   return init;
 }
