@@ -14,6 +14,20 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
+  /*
+   * INDISPENSABLE — sans cette option, le tableau `runtimeCaching` ci-dessous était
+   * purement et simplement ignoré : le Service Worker déployé ne contenait que les
+   * règles par défaut du plugin. Vérifié en production, où les caches présents
+   * étaient « static-js-assets », « pages », « start-url »… et aucun
+   * « mathscan-tesseract ». Conséquence : le modèle de langue (.gz) et le binaire
+   * WASM n'étaient retenus par AUCUNE règle du Service Worker. Ils ne survivaient
+   * que grâce au cache IndexedDB interne de Tesseract.js — un seul filet, alors que
+   * tout l'argument du produit est « ça marche sans internet ».
+   *
+   * Contrôle de non-régression après build : `grep mathscan-tesseract public/sw.js`
+   * doit trouver la règle. Si elle disparaît, l'app se remet à retélécharger.
+   */
+  extendDefaultRuntimeCaching: true,
   // Fallback hors-ligne : toute navigation non mise en cache retombe sur /offline
   fallbacks: { document: "/offline" },
   workboxOptions: {
