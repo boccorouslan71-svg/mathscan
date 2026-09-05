@@ -3,6 +3,7 @@
  * et l'énoncé nettoyé, renvoie une Solution. Aucune dépendance au DOM :
  * ce module est testable en Node/Bun et réutilisable tel quel côté worker.
  */
+import { resoutArithmetique } from "./arithmetique";
 import { resoutEquation } from "./equation";
 import { resoutSysteme } from "./systeme";
 import { resoutFraction } from "./fractions";
@@ -15,6 +16,7 @@ import { ErreurResolution, type Solution, type TypeExercice } from "./types";
 export * from "./types";
 
 const MOTEURS: Record<Exclude<TypeExercice, "inconnu">, (é: string) => Solution> = {
+  arithmetique: resoutArithmetique,
   equation_lineaire: resoutEquation,
   equation_quadratique: resoutEquation,
   systeme_2x2: resoutSysteme,
