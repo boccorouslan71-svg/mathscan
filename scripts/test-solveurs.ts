@@ -60,6 +60,32 @@ const CAS: Cas[] = [
   { énoncé: ") 18 + 6 * 4 = cen", type: "arithmetique", attendu: "42" },
   { énoncé: "d) 72 ÷ 8 = ee", type: "arithmetique", attendu: "9" },
   { énoncé: "e) 120 + 45 - 38 = eee", type: "arithmetique", attendu: "127" },
+  // Série d'opérations — photo de la PAGE ENTIÈRE. Les deux cas ci-dessous sont le texte
+  // OCR réel remonté par l'utilisateur depuis la production : plusieurs exercices par
+  // ligne, étiquettes en milieu de ligne, et blancs de réponse lus comme des mots
+  // (« ween », « eens », « eee », « …-- »). Avant correction, ces résidus passaient pour
+  // des inconnues et l'app annonçait « Système de 2 équations » à 95 %.
+  {
+    énoncé:
+      ". Effectuer les opérations suivantes\n25 + 37 = ween b) 84 - 19 = eens c) 45 * 6 =\n72 / 8 = eee e) 120 + 45 - 38 = …-- f) 144 / 12 * 5 =",
+    type: "liste_exercices",
+    attendu: /a\) 62.*b\) 65.*c\) 270.*d\) 9.*e\) 127.*f\) 60/,
+  },
+  {
+    énoncé:
+      "Effectuer les opérations suivantes\na) 25 + 37 = ween b) 84 - 19 = eens c) 45 × 6 =\nd) 72 ÷ 8 = eee e) 120 + 45 - 38 = …-- f) 144 ÷ 12 × 5 =",
+    type: "liste_exercices",
+    attendu: /a\) 62.*b\) 65.*c\) 270.*d\) 9.*e\) 127.*f\) 60/,
+  },
+  // Une série dont un calcul est illisible doit tout de même rendre les autres réponses.
+  {
+    énoncé: "a) 12 + 5 =\nb) 8 ) ) 3 =\nc) 20 - 4 =",
+    type: "liste_exercices",
+    attendu: /a\) 17.*c\) 16/,
+  },
+  // Un système d'équations reste un système : ses lignes contiennent des lettres,
+  // donc la série ne doit pas les capter (non-régression sur la famille voisine).
+  { énoncé: "3x + 2y = 8\nx - y = 1", type: "systeme_2x2", attendu: "x = 2 ; y = 1" },
   // Pourcentages
   { énoncé: "15% de 240", type: "pourcentage", attendu: "36" },
   { énoncé: "Un article à 240 F subit une remise de 15%", type: "pourcentage", attendu: "204" },
