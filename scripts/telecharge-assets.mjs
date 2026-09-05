@@ -59,9 +59,20 @@ if (existsSync(worker)) {
 }
 
 /* ---------- 3. Modèles de langue (absents du paquet npm -> téléchargement) ---------- */
+/*
+ * FRANÇAIS UNIQUEMENT — décision mesurée, pas une préférence.
+ *
+ * Le modèle anglais pesait 10,42 Mo sur les 21,5 Mo du premier scan, mesurés en
+ * production : presque la moitié du téléchargement initial. Un cahier d'exercices
+ * scolaire est en français, et le modèle français lit déjà les chiffres et les
+ * symboles (qui sont les mêmes dans les deux langues). L'anglais ne servait donc
+ * qu'à doubler la facture de données de l'élève.
+ *
+ * Ne pas le rajouter « au cas où » : chaque modèle ici est payé en données mobiles
+ * par chaque utilisateur, au premier lancement.
+ */
 const LANGUES = [
   { url: "https://tessdata.projectnaptha.com/4.0.0/fra.traineddata.gz", dest: join(dossierL, "fra.traineddata.gz") },
-  { url: "https://tessdata.projectnaptha.com/4.0.0/eng.traineddata.gz", dest: join(dossierL, "eng.traineddata.gz") },
 ];
 
 for (const { url, dest } of LANGUES) {
