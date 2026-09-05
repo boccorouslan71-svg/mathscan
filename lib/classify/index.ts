@@ -48,6 +48,13 @@ export function normaliseOCR(brut: string): string {
     .replace(/([0-9])[lI](?=[^a-zA-Z]|$)/g, "$11")
     .replace(/\bx\s*2\b/g, "x^2")
     .replace(/[ \t]{2,}/g, " ");
+  // Multiplication écrite « x » ou « X » : mesuré sur 48 combinaisons, Tesseract ne rend
+  // JAMAIS le glyphe « × » — il le lit toujours comme la lettre x. On ne convertit que
+  // lorsqu'un nombre ou une parenthèse encadre le symbole, pour ne pas transformer
+  // l'inconnue x d'une équation (« 3x + 5 = 20 ») en opérateur.
+  s = s
+    .replace(/(\d)\s*[xX]\s*(?=[\d(])/g, "$1 * ")
+    .replace(/\)\s*[xX]\s*(?=[\d(])/g, ") * ");
   // Étiquette d'item en début de ligne : « a) », « b) », « bh) » (l'OCR double parfois
   // la lettre). Sans ce nettoyage, la parenthèse entrait dans le calcul et le solveur
   // s'arrêtait sur « Unexpected operator ) » — constaté en production sur une photo réelle.
@@ -60,6 +67,45 @@ export function normaliseOCR(brut: string): string {
   // « x = ? » et parasites de fin
   s = s.replace(/[.·•]+\s*$/gm, "").trim();
   return s;
+}
+
+/**
+ * Reconnaît un calcul purement numérique : chiffres, opérateurs, parenthèses, et
+ * éventuellement un nom de résultat en tête (« A = 7 × (3 + 5) »).
+ * Rend l'expression si c'en est un, sinon null.
+ *
+ * Le discriminant avec une véritable équation est simple : après avoir retiré un
+ * préfixe « Nom = », il ne doit plus rester AUCUNE lettre. « 3x + 5 = 20 » garde son
+ * x et reste donc une équation ; « A = 7 × (3 + 5) » devient un calcul à effectuer.
+ */
+function detecteArithmetique(texte: string, brut: string): string | null {
+  const lignes = texte
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lignes.length !== 1) return null;
+  let ligne = lignes[0].replace(/=\s*$/, "").trim();
+  const nommé = /^([A-Za-z])\s*=\s*(.+)$/.exec(ligne);
+  if (nommé) ligne = nommé[2].trim();
+  if (/[A-Za-z%]/.test(ligne)) return null;
+  if (!/^[\d\s+\-*/().,]+$/.test(ligne)) return null;
+  if (!/[+\-*/]/.test(ligne)) return null;
+  if ((ligne.match(/\d+/g) ?? []).length < 2) return null;
+  // Frontière avec la famille « fractions ». normaliseOCR convertit « ÷ » en « / », donc
+  // « 90 - 15 ÷ 3 » et « 3/4 + 5/6 » se ressemblent après nettoyage. Le signe « ÷ » du
+  // texte d'origine tranche : c'est une division à effectuer, jamais une écriture
+  // fractionnaire. Sans cette lecture du brut, « 72 ÷ 8 » repartait vers les fractions
+  // et se voyait expliqué par le PGCD.
+  const divisionExplicite = /÷/.test(brut);
+  if (!divisionExplicite) {
+    //  - deux écritures a/b ou plus  → un calcul de fractions, dont la réponse doit rester
+    //    une fraction exacte (19/12, pas 1,5833) ;
+    //  - une seule a/b isolée       → une simplification, également du ressort des fractions.
+    const écrituresFraction = (ligne.match(/\d+\s*\/\s*\d+/g) ?? []).length;
+    if (écrituresFraction >= 2) return null;
+    if (/^\d+\s*\/\s*\d+$/.test(ligne)) return null;
+  }
+  return ligne;
 }
 
 const MOTS: Record<string, TypeExercice> = {
@@ -127,6 +173,15 @@ export function classifie(brut: string): Classification {
       message:
         "Je n'ai pas trouvé de calcul dans cette image. Reprends la photo en cadrant bien l'exercice, ou corrige le texte détecté.",
     };
+
+  // 0. Arithmétique pure (priorités des opérations, parenthèses).
+  //    Placée en tête : « Calculer en respectant les priorités » est le cœur du
+  //    programme visé, et ces énoncés se repliaient auparavant sur « Fractions »,
+  //    qui expliquait le PGCD et les dénominateurs — hors sujet. Les familles à
+  //    mots-clés (conversion, géométrie, pourcentage) ne peuvent pas être captées
+  //    ici : un calcul purement numérique n'en contient aucun.
+  const arith = detecteArithmetique(texte, brut);
+  if (arith && !mots_clés.some((m) => MOTS[m] === "fraction")) return rendu("arithmetique", 0.94, ["fraction"]);
 
   // 1. Système de 2 équations
   if (équations.length >= 2 && new Set(inconnues).size >= 2)
