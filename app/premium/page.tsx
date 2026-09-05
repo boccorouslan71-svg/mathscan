@@ -14,6 +14,19 @@ import { SCANS_GRATUITS_PAR_JOUR, activePremium, etatQuota } from "@/lib/db";
 /** Lien de vente Chariow — configurable sans toucher au code (variable Vercel). */
 const LIEN_CHARIOW = process.env.NEXT_PUBLIC_CHARIOW_URL ?? "https://chariow.com";
 
+/**
+ * Tarification : paiement unique, accès à vie.
+ * Offre de lancement pour les premiers acheteurs, puis prix normal.
+ * Pour clore le lancement : variable Vercel NEXT_PUBLIC_OFFRE_LANCEMENT=0 (aucun redéploiement du code).
+ */
+const PRIX_NORMAL = 2000;
+const PRIX_LANCEMENT = 1000;
+const PLACES_LANCEMENT = 100;
+const LANCEMENT_ACTIF = process.env.NEXT_PUBLIC_OFFRE_LANCEMENT !== "0";
+const PRIX_ACTUEL = LANCEMENT_ACTIF ? PRIX_LANCEMENT : PRIX_NORMAL;
+
+const enFcfa = (n: number) => `${n.toLocaleString("fr-FR")} FCFA`;
+
 function Premium() {
   const { t } = useLangue();
   const params = useSearchParams();
@@ -53,6 +66,20 @@ function Premium() {
         <>
           <section className="card mt-4">
             <h2 className="text-xl font-extrabold">Scans illimités</h2>
+
+            <div className="mt-3 flex items-end gap-2">
+              <span className="text-3xl font-extrabold text-accent-500">{enFcfa(PRIX_ACTUEL)}</span>
+              {LANCEMENT_ACTIF && (
+                <span className="pb-1 text-lg text-ink-400 line-through">{enFcfa(PRIX_NORMAL)}</span>
+              )}
+            </div>
+            <p className="mt-1 text-sm font-semibold">Une seule fois. À vie. Aucun abonnement.</p>
+            {LANCEMENT_ACTIF && (
+              <p className="mt-2 rounded-xl2 bg-accent-400/10 px-3 py-2 text-xs font-semibold text-accent-500 dark:text-accent-400">
+                🎉 Prix de lancement — réservé aux {PLACES_LANCEMENT} premiers acheteurs
+              </p>
+            )}
+
             <ul className="mt-3 space-y-2 text-sm">
               <li>♾️ Aucune limite quotidienne</li>
               <li>💡 Toutes les explications détaillées</li>
@@ -60,10 +87,14 @@ function Premium() {
               <li>🕘 Historique et favoris illimités</li>
             </ul>
             <a href={LIEN_CHARIOW} target="_blank" rel="noreferrer" className="btn-primary mt-4 w-full">
-              {t("acheter")}
+              {t("acheter")} — {enFcfa(PRIX_ACTUEL)}
             </a>
             <p className="mt-2 text-center text-xs text-ink-400">
               Paiement sécurisé via Chariow. Tu reçois ton code d&apos;activation juste après l&apos;achat.
+            </p>
+            <p className="mt-3 border-t border-black/5 pt-3 text-center text-xs text-ink-400 dark:border-white/5">
+              À comparer : une seule heure de cours particuliers coûte plusieurs milliers de FCFA.
+              MathScan, c&apos;est un paiement unique pour toute l&apos;année scolaire.
             </p>
           </section>
 
