@@ -1,70 +1,105 @@
 /**
- * Télécharge en local les binaires nécessaires au fonctionnement HORS-LIGNE :
- *   - worker + coeur WASM de Tesseract.js  -> public/tesseract/
- *   - modèles de langue français + anglais -> public/tesseract/lang/
+ * Prépare les assets nécessaires au fonctionnement HORS-LIGNE de l'OCR :
+ *   - worker + TOUTES les variantes du coeur WASM -> public/tesseract/
+ *   - modèles de langue                          -> public/tesseract/lang/
  *
- * Exécuté automatiquement avant chaque build (script "prebuild" de package.json),
- * y compris sur Vercel. Les fichiers ne sont pas versionnés dans Git (voir .gitignore) :
- * ils sont reconstruits au build, ce qui garde le dépôt léger — important quand on
- * pousse depuis un téléphone.
+ * Exécuté avant chaque build (script "prebuild"), y compris sur Vercel.
  *
- * Sans ces fichiers locaux, Tesseract.js irait les chercher sur un CDN au premier
- * scan : l'app resterait fonctionnelle mais la promesse « zéro data ensuite » serait
- * plus fragile (le Service Worker ne contrôle pas un domaine tiers aussi bien).
+ * POURQUOI on copie depuis node_modules et non depuis un CDN :
+ * Tesseract.js choisit AU RUNTIME la variante du coeur selon le navigateur
+ * (SIMD disponible ou non, moteur LSTM ou non) — il peut donc réclamer
+ * « tesseract-core-simd-lstm.wasm.js » là où un autre navigateur demande
+ * « tesseract-core.wasm.js ». Lister les URLs à la main revenait à parier sur
+ * ces noms : une variante oubliée = échec total du scan sur les navigateurs
+ * concernés (bug constaté en production). On copie donc l'INTÉGRALITÉ du
+ * paquet tesseract.js-core déjà installé et verrouillé par le lockfile :
+ * aucun nom à devineer, aucune dérive de version possible.
  */
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { createWriteStream, mkdirSync, readdirSync, copyFileSync, existsSync, statSync } from "node:fs";
 import { pipeline } from "node:stream/promises";
-import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const racine = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dossierT = join(racine, "public", "tesseract");
 const dossierL = join(dossierT, "lang");
+const modules = join(racine, "node_modules");
 
-const version = JSON.parse(
-  await readFile(join(racine, "package.json"), "utf8"),
-).dependencies["tesseract.js"].replace(/[^0-9.]/g, "");
+mkdirSync(dossierL, { recursive: true });
 
-const FICHIERS = [
-  // Worker et coeur WASM, épinglés sur la version installée
-  { url: `https://unpkg.com/tesseract.js@${version}/dist/worker.min.js`, dest: join(dossierT, "worker.min.js") },
-  { url: "https://unpkg.com/tesseract.js-core@5.1.1/tesseract-core.wasm.js", dest: join(dossierT, "tesseract-core.wasm.js") },
-  { url: "https://unpkg.com/tesseract.js-core@5.1.1/tesseract-core-simd.wasm.js", dest: join(dossierT, "tesseract-core-simd.wasm.js") },
-  // Modèles de langue (format « fast », le meilleur compromis taille/précision sur mobile)
+const échecs = [];
+let copiés = 0;
+
+/* ---------- 1. Coeur WASM : toutes les variantes, depuis le paquet installé ---------- */
+const src = join(modules, "tesseract.js-core");
+if (!existsSync(src)) {
+  échecs.push("paquet tesseract.js-core introuvable dans node_modules");
+} else {
+  // .wasm.js = glue chargée par importScripts ; .wasm = binaire que cette glue va chercher.
+  const utiles = readdirSync(src).filter((f) => f.endsWith(".wasm.js") || f.endsWith(".wasm"));
+  const variantes = utiles.filter((f) => f.endsWith(".wasm.js"));
+  if (variantes.length < 4) {
+    échecs.push(`seulement ${variantes.length} variante(s) de coeur trouvée(s), 4 attendues`);
+  }
+  for (const f of utiles) {
+    copyFileSync(join(src, f), join(dossierT, f));
+    copiés++;
+  }
+  console.log(`✅ coeur OCR : ${variantes.length} variantes + binaires (${utiles.length} fichiers)`);
+}
+
+/* ---------- 2. Worker, depuis le paquet installé (versions toujours alignées) ---------- */
+const worker = join(modules, "tesseract.js", "dist", "worker.min.js");
+if (existsSync(worker)) {
+  copyFileSync(worker, join(dossierT, "worker.min.js"));
+  copiés++;
+  console.log("✅ worker.min.js");
+} else {
+  échecs.push("tesseract.js/dist/worker.min.js introuvable");
+}
+
+/* ---------- 3. Modèles de langue (absents du paquet npm -> téléchargement) ---------- */
+const LANGUES = [
   { url: "https://tessdata.projectnaptha.com/4.0.0/fra.traineddata.gz", dest: join(dossierL, "fra.traineddata.gz") },
   { url: "https://tessdata.projectnaptha.com/4.0.0/eng.traineddata.gz", dest: join(dossierL, "eng.traineddata.gz") },
 ];
 
-mkdirSync(dossierL, { recursive: true });
-
-let téléchargés = 0;
-let ignorés = 0;
-const échecs = [];
-
-for (const { url, dest } of FICHIERS) {
-  if (existsSync(dest)) {
-    ignorés++;
+for (const { url, dest } of LANGUES) {
+  if (existsSync(dest) && statSync(dest).size > 0) {
+    console.log(`↩︎ déjà présent : ${dest.replace(racine, ".")}`);
     continue;
   }
   try {
     const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     await pipeline(r.body, createWriteStream(dest));
-    téléchargés++;
+    copiés++;
     console.log(`✅ ${dest.replace(racine, ".")}`);
   } catch (e) {
-    // On échoue bruyamment : un build « réussi » sans ces fichiers casserait l'offline
     échecs.push(`${url} → ${e.message}`);
-    console.error(`❌ ${url} : ${e.message}`);
   }
 }
 
-console.log(`\nAssets OCR : ${téléchargés} téléchargé(s), ${ignorés} déjà présent(s).`);
-if (échecs.length) {
-  console.error(
-    "\nCertains assets OCR manquent. Le build continue, mais Tesseract.js retombera sur le CDN\n" +
-      "au premier scan (l'app reste utilisable). Relance `node scripts/telecharge-assets.mjs`\n" +
-      "avec une connexion stable pour restaurer l'offline complet.",
-  );
+/* ---------- 4. Vérification finale : on échoue BRUYAMMENT ---------- */
+const attendus = [
+  "worker.min.js",
+  "tesseract-core.wasm.js",
+  "tesseract-core-simd.wasm.js",
+  "tesseract-core-lstm.wasm.js",
+  "tesseract-core-simd-lstm.wasm.js",
+  "lang/fra.traineddata.gz",
+];
+const manquants = attendus.filter((f) => {
+  const p = join(dossierT, f);
+  return !existsSync(p) || statSync(p).size === 0;
+});
+
+console.log(`\nAssets OCR : ${copiés} fichier(s) préparé(s).`);
+
+if (manquants.length || échecs.length) {
+  if (manquants.length) console.error("Fichiers manquants ou vides :\n  - " + manquants.join("\n  - "));
+  if (échecs.length) console.error("Erreurs :\n  - " + échecs.join("\n  - "));
+  console.error("\nSans ces fichiers l'OCR échoue au premier scan. Build interrompu.");
+  process.exit(1);
 }
+console.log("Tous les assets OCR requis sont présents.");
