@@ -13,6 +13,7 @@
  */
 import type { TypeExercice } from "../solvers/types";
 import { UNITES_CONNUES } from "../solvers/unites";
+import { découpeExercices } from "../solvers/liste";
 
 export interface Classification {
   type: TypeExercice;
@@ -55,6 +56,16 @@ export function normaliseOCR(brut: string): string {
   s = s
     .replace(/(\d)\s*[xX]\s*(?=[\d(])/g, "$1 * ")
     .replace(/\)\s*[xX]\s*(?=[\d(])/g, ") * ");
+  // Une photo de page entière contient plusieurs exercices étiquetés « a) b) c) … »,
+  // et un cahier en met PLUSIEURS PAR LIGNE. Tous les nettoyages qui suivent raisonnent
+  // ligne par ligne (ancres ^ et $) : sans ce découpage préalable, seuls le premier et le
+  // dernier item d'une ligne étaient nettoyés. Les blancs de réponse du milieu restaient
+  // (« 25 + 37 = ween b) 84 - 19 = eens »), et le classifieur lisait ces résidus comme des
+  // inconnues — d'où un « système de 2 équations » sur une simple liste d'opérations.
+  s = s.replace(/([^\n])[ \t]+([a-h])[ \t]*\)[ \t]*(?=[\d(])/g, "$1\n$2) ");
+  // Puce ou point parasite en tête de ligne (« . Effectuer les opérations… »).
+  // On ne touche pas au « - », qui peut être le signe d'un nombre négatif.
+  s = s.replace(/^[ \t]*[.·•]+[ \t]*/gm, "");
   // Étiquette d'item en début de ligne : « a) », « b) », « bh) » (l'OCR double parfois
   // la lettre), et « ) » seule quand le cadrage a coupé la lettre — cas observé en
   // production sur un cadrage serré. Sans ce nettoyage, la parenthèse entrait dans le
@@ -177,7 +188,20 @@ export function classifie(brut: string): Classification {
         "Je n'ai pas trouvé de calcul dans cette image. Reprends la photo en cadrant bien l'exercice, ou corrige le texte détecté.",
     };
 
-  // 0. Arithmétique pure (priorités des opérations, parenthèses).
+  // 0. Série d'opérations : la photo couvre toute la liste d'exercices (a, b, c…).
+  //    Testé AVANT le système d'équations, car c'est exactement le cas que le système
+  //    captait à tort : les résidus d'OCR après « = » et les étiquettes « b) c) »
+  //    passaient pour des inconnues, et une liste d'additions était annoncée
+  //    « Système de 2 équations » à 95 %.
+  //    Une vraie ligne d'équation (« 2x + 3y = 12 ») contient une lettre : elle est
+  //    donc écartée d'office par le filtre purement numérique de découpeExercices.
+  const série = découpeExercices(texte);
+  const sérieFractions =
+    !/÷/.test(brut) && série.some((l) => (l.match(/\d+\s*\/\s*\d+/g) ?? []).length >= 2);
+  if (série.length >= 2 && !sérieFractions && !mots_clés.some((m) => MOTS[m] === "fraction"))
+    return rendu("liste_exercices", 0.93, ["arithmetique"]);
+
+  // 0 bis. Arithmétique pure (priorités des opérations, parenthèses).
   //    Placée en tête : « Calculer en respectant les priorités » est le cœur du
   //    programme visé, et ces énoncés se repliaient auparavant sur « Fractions »,
   //    qui expliquait le PGCD et les dénominateurs — hors sujet. Les familles à

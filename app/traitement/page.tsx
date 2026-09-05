@@ -90,28 +90,9 @@ function Traitement() {
     setPhase("relecture");
   }, []);
 
-  /**
-   * Une photo de page entière contient plusieurs exercices : le texte lu mélange
-   * alors des énoncés indépendants, et le solveur, croyant voir un seul problème,
-   * répondait « ce système a 10 inconnues » — incompréhensible pour un élève.
-   * On détecte le cas par le nombre de repères d'items (a), b), c)…) et on
-   * demande un cadrage sur UN exercice, ce que l'app sait résoudre.
-   */
-  const compteItems = (t: string) =>
-    new Set((t.match(/(?:^|[\s(])([a-f])\)/gm) ?? []).map((m) => m.trim().toLowerCase())).size;
-
   // Étape 3 — Résolution (déterministe, instantanée)
   const résous = async () => {
     setPhase("resolution");
-    if (compteItems(texte) >= 3) {
-      setErreur({
-        msg: "Plusieurs exercices sur la même photo.",
-        conseil:
-          "MathScan résout un exercice à la fois. Reprends la photo et réduis le cadre bleu sur UN seul exercice (par exemple « 90 − 15 ÷ 3 »).",
-      });
-      setPhase("erreur");
-      return;
-    }
     const c = classifie(texte);
     if (c.type === "inconnu") {
       setErreur({ msg: c.message ?? "Exercice non reconnu.", conseil: "Corrige le texte ci-dessus." });
