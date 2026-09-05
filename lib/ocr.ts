@@ -32,7 +32,10 @@ async function démarre(onAvancement?: Avancement): Promise<Worker> {
   if (!init)
     init = (async () => {
       try {
-        const w = await createWorker(["fra", "eng"], 1, {
+        // Français seul. L'anglais coûtait 10,42 Mo de données mobiles au premier
+        // scan (mesuré en production) sans rien apporter : les chiffres et les
+        // symboles d'un cahier français sont déjà couverts par le modèle français.
+        const w = await createWorker(["fra"], 1, {
           ...CHEMINS,
           logger: (m) => {
             if (onAvancement && m.status)
