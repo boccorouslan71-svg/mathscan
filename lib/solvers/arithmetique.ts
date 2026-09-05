@@ -24,6 +24,20 @@ function formate(n: number): string {
 
 const SIGNE: Record<string, string> = { "*": "×", "/": "÷", "+": "+", "-": "−" };
 
+/**
+ * Réécrit un calcul dans l'écriture scolaire : « × », « ÷ », « − ».
+ * Le moteur travaille en interne avec *, / et -, mais un élève ne doit jamais voir
+ * cette forme informatique : l'énoncé affiché à l'écran passe donc par ici.
+ */
+export function écritureScolaire(expr: string): string {
+  return expr
+    .replace(/\*/g, "×")
+    .replace(/\//g, "÷")
+    .replace(/-/g, "−")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function affiche(elems: Elem[]): string {
   return elems
     .map((e) => (typeof e === "number" ? formate(e) : (SIGNE[e] ?? e)))
@@ -212,7 +226,9 @@ export function resoutArithmetique(énoncé: string): Solution {
 
   return {
     type: "arithmetique",
-    énoncé,
+    // Écriture scolaire : l'écran affichait « 90 - 15 / 3 » là où le cahier écrit
+    // « 90 − 15 ÷ 3 ». Les étapes utilisaient déjà les bons signes, l'énoncé non.
+    énoncé: écritureScolaire(énoncé),
     réponse,
     étapes: étapes.tableau,
     méthode: avaitParenthèses

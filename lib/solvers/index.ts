@@ -4,6 +4,7 @@
  * ce module est testable en Node/Bun et réutilisable tel quel côté worker.
  */
 import { resoutArithmetique } from "./arithmetique";
+import { resoutListe } from "./liste";
 import { resoutEquation } from "./equation";
 import { resoutSysteme } from "./systeme";
 import { resoutFraction } from "./fractions";
@@ -17,6 +18,7 @@ export * from "./types";
 
 const MOTEURS: Record<Exclude<TypeExercice, "inconnu">, (é: string) => Solution> = {
   arithmetique: resoutArithmetique,
+  liste_exercices: resoutListe,
   equation_lineaire: resoutEquation,
   equation_quadratique: resoutEquation,
   systeme_2x2: resoutSysteme,
