@@ -15,6 +15,7 @@ export interface Etape {
 /** Types d'exercices couverts en V1. */
 export type TypeExercice =
   | "arithmetique"
+  | "liste_exercices"
   | "equation_lineaire"
   | "equation_quadratique"
   | "systeme_2x2"
@@ -27,6 +28,7 @@ export type TypeExercice =
 
 export const LIBELLES: Record<TypeExercice, { fr: string; en: string }> = {
   arithmetique: { fr: "Priorités des opérations", en: "Order of operations" },
+  liste_exercices: { fr: "Série d'opérations", en: "Set of operations" },
   equation_lineaire: { fr: "Équation du 1er degré", en: "Linear equation" },
   equation_quadratique: { fr: "Équation du 2nd degré", en: "Quadratic equation" },
   systeme_2x2: { fr: "Système de 2 équations", en: "System of 2 equations" },
