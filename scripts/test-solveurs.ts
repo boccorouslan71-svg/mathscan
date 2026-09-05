@@ -32,6 +32,29 @@ const CAS: Cas[] = [
   { énoncé: "3/4 + 5/6", type: "fraction", attendu: /19\/12/ },
   { énoncé: "2/3 * 9/4", type: "fraction", attendu: /3\/2/ },
   { énoncé: "7/8 - 1/2", type: "fraction", attendu: /3\/8/ },
+  // Priorités des opérations — tous ces cas viennent de la photo de cahier réelle
+  // envoyée par l'utilisateur. Le « ÷ » y est rétabli par géométrie (lib/glyphes.ts)
+  // et le « × » par normalisation, ces cas verrouillent donc les deux corrections.
+  { énoncé: "25 + 37 =", type: "arithmetique", attendu: "62" },
+  { énoncé: "84 - 19 =", type: "arithmetique", attendu: "65" },
+  { énoncé: "45 × 6 =", type: "arithmetique", attendu: "270" },
+  { énoncé: "72 ÷ 8 =", type: "arithmetique", attendu: "9" },
+  { énoncé: "120 + 45 - 38 =", type: "arithmetique", attendu: "127" },
+  { énoncé: "144 ÷ 12 × 5 =", type: "arithmetique", attendu: "60" },
+  { énoncé: "18 + 6 × 4 =", type: "arithmetique", attendu: "42" },
+  // Le cas de référence : lu « 90 - 15 + 3 » avant correction, il rendait 78.
+  { énoncé: "90 - 15 ÷ 3 =", type: "arithmetique", attendu: "85" },
+  { énoncé: "(32 - 12) × 3 =", type: "arithmetique", attendu: "60" },
+  { énoncé: "48 ÷ (6 + 2) =", type: "arithmetique", attendu: "6" },
+  { énoncé: "A = 7 × (3 + 5)", type: "arithmetique", attendu: "A = 56" },
+  { énoncé: "B = 80 - 4 × (6 - 2)", type: "arithmetique", attendu: "B = 64" },
+  // Multiplication écrite avec la lettre x, telle que l'OCR la rend toujours
+  { énoncé: "18 + 6 x 4 =", type: "arithmetique", attendu: "42" },
+  { énoncé: "(32 - 12) X 3 =", type: "arithmetique", attendu: "60" },
+  // Priorité réellement respectée, et non un simple enchaînement de gauche à droite
+  { énoncé: "2 + 3 × 4 =", type: "arithmetique", attendu: "14" },
+  { énoncé: "100 ÷ 4 ÷ 5 =", type: "arithmetique", attendu: "5" },
+  { énoncé: "10 - 2 - 3 =", type: "arithmetique", attendu: "5" },
   // Pourcentages
   { énoncé: "15% de 240", type: "pourcentage", attendu: "36" },
   { énoncé: "Un article à 240 F subit une remise de 15%", type: "pourcentage", attendu: "204" },
