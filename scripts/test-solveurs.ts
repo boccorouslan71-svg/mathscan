@@ -55,6 +55,11 @@ const CAS: Cas[] = [
   { énoncé: "2 + 3 × 4 =", type: "arithmetique", attendu: "14" },
   { énoncé: "100 ÷ 4 ÷ 5 =", type: "arithmetique", attendu: "5" },
   { énoncé: "10 - 2 - 3 =", type: "arithmetique", attendu: "5" },
+  // Résidus de cadrage serré, tels que l'OCR les rend réellement en production :
+  // étiquette dont la lettre est coupée, et pointillés de réponse lus comme un mot.
+  { énoncé: ") 18 + 6 * 4 = cen", type: "arithmetique", attendu: "42" },
+  { énoncé: "d) 72 ÷ 8 = ee", type: "arithmetique", attendu: "9" },
+  { énoncé: "e) 120 + 45 - 38 = eee", type: "arithmetique", attendu: "127" },
   // Pourcentages
   { énoncé: "15% de 240", type: "pourcentage", attendu: "36" },
   { énoncé: "Un article à 240 F subit une remise de 15%", type: "pourcentage", attendu: "204" },
