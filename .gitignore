@@ -13,9 +13,12 @@ public/workbox-*.js
 public/workbox-*.js.map
 public/fallback-*.js
 
-# Assets OCR téléchargés au build (~25 Mo) — voir scripts/telecharge-assets.mjs
+# Assets OCR préparés au build (~30 Mo) — voir scripts/telecharge-assets.mjs
+# Le motif *.js ne couvre PAS les binaires .wasm : sans la ligne dédiée, 12 Mo de
+# binaires partaient dans le dépôt. Tout est régénéré au build (prebuild).
 public/tesseract/worker.min.js
 public/tesseract/tesseract-core*.js
+public/tesseract/tesseract-core*.wasm
 public/tesseract/lang/
 
 # Modèle Needle 2 optionnel, s'il est ajouté un jour
