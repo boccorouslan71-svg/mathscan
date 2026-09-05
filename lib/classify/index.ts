@@ -56,12 +56,15 @@ export function normaliseOCR(brut: string): string {
     .replace(/(\d)\s*[xX]\s*(?=[\d(])/g, "$1 * ")
     .replace(/\)\s*[xX]\s*(?=[\d(])/g, ") * ");
   // Étiquette d'item en début de ligne : « a) », « b) », « bh) » (l'OCR double parfois
-  // la lettre). Sans ce nettoyage, la parenthèse entrait dans le calcul et le solveur
-  // s'arrêtait sur « Unexpected operator ) » — constaté en production sur une photo réelle.
-  s = s.replace(/^\s*[A-Za-z]{1,2}\s*\)\s*/gm, "");
-  // Pointillés de réponse à remplir : « = ....... », « = .eeeeee », « = … ».
-  // L'OCR lit ces pointillés comme des lettres ; on coupe tout ce qui suit le « = » final
-  // quand il ne reste qu'un amas de points ou de lettres répétées.
+  // la lettre), et « ) » seule quand le cadrage a coupé la lettre — cas observé en
+  // production sur un cadrage serré. Sans ce nettoyage, la parenthèse entrait dans le
+  // calcul et le solveur s'arrêtait sur « Value expected ».
+  s = s.replace(/^\s*[A-Za-z]{0,2}\s*\)\s*/gm, "");
+  // Pointillés de réponse à remplir. L'OCR les rend tantôt en points, tantôt en lettres
+  // répétées (« .eeeee »), tantôt en petit mot sans signification (« cen », « oo »).
+  // Règle générale : ce qui suit le « = » final sans contenir aucun chiffre est le blanc
+  // à remplir, pas du contenu de l'énoncé.
+  s = s.replace(/=\s*[^\n\d=]{1,8}$/gm, "=");
   s = s.replace(/=\s*[.·•…\s]*[eE]{2,}[.·•…\s]*$/gm, "=");
   s = s.replace(/=\s*[.·•…]{2,}\s*$/gm, "=");
   // « x = ? » et parasites de fin
